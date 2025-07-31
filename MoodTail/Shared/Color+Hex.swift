@@ -44,20 +44,73 @@ extension Color {
     static let moodColors = MoodColors()
     
     struct MoodColors {
-        // Основные цвета эмоций
-        let happy = Color(hex: "#FFD700")      // Золотой для счастья
-        let excited = Color(hex: "#FF6B6B")    // Красный для возбуждения
-        let calm = Color(hex: "#4ECDC4")       // Бирюзовый для спокойствия
-        let anxious = Color(hex: "#FFA500")    // Оранжевый для тревоги
-        let sad = Color(hex: "#6C5CE7")        // Фиолетовый для грусти
-        let playful = Color(hex: "#A8E6CF")    // Мятный для игривости
-        let tired = Color(hex: "#9B59B6")      // Сиреневый для усталости
-        let aggressive = Color(hex: "#E74C3C") // Красный для агрессии
-        
+        // Основные цвета эмоций (обновленные)
+        let happy = Color(hex: "#FFB26F")      // Теплый желтый
+        let excited = Color(hex: "#CB9DF0")    // Нежный фиолетовый
+        let calm = Color(hex: "#BFECFF")       // Мягкий голубой
+        let anxious = Color(hex: "#FFA500")    // Тревожный оранжевый
+        let sad = Color(hex: "#6C5CE7")        // Глубокий фиолетовый
+        let playful = Color(hex: "#A8E6CF")    // Свежий мятный
+        let tired = Color(hex: "#9B59B6")      // Умиротворяющий сиреневый
+        let aggressive = Color(hex: "#E74C3C") // Интенсивный красный
+
+        // Градиенты для эмоций (обновленные)
+        let happyGradient = LinearGradient(
+            colors: [Color(hex: "#FFB26F"), Color(hex: "#FFA726")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let excitedGradient = LinearGradient(
+            colors: [Color(hex: "#CB9DF0"), Color(hex: "#A29BFE")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let calmGradient = LinearGradient(
+            colors: [Color(hex: "#BFECFF"), Color(hex: "#81C784")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let anxiousGradient = LinearGradient(
+            colors: [Color(hex: "#FFA500"), Color(hex: "#FFB74D")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let sadGradient = LinearGradient(
+            colors: [Color(hex: "#6C5CE7"), Color(hex: "#A29BFE")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let playfulGradient = LinearGradient(
+            colors: [Color(hex: "#A8E6CF"), Color(hex: "#81C784")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let tiredGradient = LinearGradient(
+            colors: [Color(hex: "#9B59B6"), Color(hex: "#BA68C8")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let aggressiveGradient = LinearGradient(
+            colors: [Color(hex: "#E74C3C"), Color(hex: "#EF5350")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
         // Дополнительные цвета
         let background = Color(hex: "#F8F9FA") // Светло-серый фон
         let text = Color(hex: "#2C3E50")       // Темно-серый текст
         let secondary = Color(hex: "#95A5A6")  // Серый для второстепенного текста
+
+        // Новые цвета для современного дизайна
+        let cardBackground = Color(hex: "#FFFFFF")
+        let cardShadow = Color(hex: "#000000").opacity(0.08)
+        let cardShadowStrong = Color(hex: "#000000").opacity(0.12)
+
+        // Цвета для состояний
+        let success = Color(hex: "#34C759")
+        let warning = Color(hex: "#FF9500")
+        let error = Color(hex: "#FF3B30")
+        let info = Color(hex: "#007AFF")
     }
 }
 

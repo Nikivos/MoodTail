@@ -5,8 +5,8 @@ import Combine
 class SettingsViewModel: ObservableObject {
     @Published var sections: [SettingSection] = []
     
-    private let notificationManager: NotificationManager
-    private let themeManager: ThemeManager
+    private var notificationManager: NotificationManager
+    private var themeManager: ThemeManager
     private var cancellables = Set<AnyCancellable>()
     
     init(notificationManager: NotificationManager, themeManager: ThemeManager) {
@@ -179,6 +179,13 @@ class SettingsViewModel: ObservableObject {
             
             sections[themeIndex].items[itemIndex] = newItem
         }
+    }
+    
+    // MARK: - Dependencies Update
+    
+    func updateDependencies(notificationManager: NotificationManager, themeManager: ThemeManager) {
+        self.notificationManager = notificationManager
+        self.themeManager = themeManager
     }
 }
 

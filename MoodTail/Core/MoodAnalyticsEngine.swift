@@ -85,7 +85,8 @@ class MoodAnalyticsEngine {
         
         return grouped.mapValues { dayEntries in
             let totalIntensity = dayEntries.reduce(0) { $0 + Int($1.intensity) }
-            return Double(totalIntensity) / Double(dayEntries.count)
+            let average = dayEntries.count > 0 ? Double(totalIntensity) / Double(dayEntries.count) : 0.0
+            return average.isNaN ? 0.0 : average
         }
     }
     
@@ -99,7 +100,8 @@ class MoodAnalyticsEngine {
     
     private func calculateAverageIntensity(_ entries: [MoodEntry]) async -> Double {
         let totalIntensity = entries.reduce(0) { $0 + Int($1.intensity) }
-        return Double(totalIntensity) / Double(entries.count)
+        let average = entries.count > 0 ? Double(totalIntensity) / Double(entries.count) : 0.0
+        return average.isNaN ? 0.0 : average
     }
     
     private func calculateWeeklyTrend(_ entries: [MoodEntry], weekAgo: Date) async -> String {

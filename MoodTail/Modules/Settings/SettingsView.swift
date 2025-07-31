@@ -2,116 +2,52 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var viewModel: SettingsViewModel
-    @State private var showingAboutApp = false
-    @State private var showingThemeSelection = false
-    @State private var showingReminders = false
     @EnvironmentObject var themeManager: ThemeManager
-    let notificationManager: NotificationManager
+    @EnvironmentObject var notificationManager: NotificationManager
     
-    // MARK: - Computed Colors
-    private var backgroundColor: Color {
-        switch themeManager.currentTheme {
-        case .light:
-            return .lightSecondaryBackground
-        case .dark:
-            return .darkSecondaryBackground
-        case .system:
-            return themeManager.isDarkMode ? .darkSecondaryBackground : .lightSecondaryBackground
-        }
-    }
+    @State private var showingReminders = false
+    @State private var showingThemeSelection = false
+    @State private var showingAboutApp = false
+    @State private var showingPetProfile = false
     
-    private var primaryTextColor: Color {
-        switch themeManager.currentTheme {
-        case .light:
-            return .lightPrimaryText
-        case .dark:
-            return .darkPrimaryText
-        case .system:
-            return themeManager.isDarkMode ? .darkPrimaryText : .lightPrimaryText
-        }
-    }
-    
-    private var secondaryTextColor: Color {
-        switch themeManager.currentTheme {
-        case .light:
-            return .lightSecondaryText
-        case .dark:
-            return .darkSecondaryText
-        case .system:
-            return themeManager.isDarkMode ? .darkSecondaryText : .lightSecondaryText
-        }
-    }
-    
-    private var accentColor: Color {
-        switch themeManager.currentTheme {
-        case .light:
-            return .lightAccent
-        case .dark:
-            return .darkAccent
-        case .system:
-            return themeManager.isDarkMode ? .darkAccent : .lightAccent
-        }
-    }
-    
-    init(notificationManager: NotificationManager) {
-        self.notificationManager = notificationManager
-        self._viewModel = StateObject(wrappedValue: SettingsViewModel(
-            notificationManager: notificationManager,
-            themeManager: ThemeManager()
-        ))
-    }
-    
-    private var actualViewModel: SettingsViewModel {
-        // Используем environmentObject themeManager вместо созданного в init
-        return SettingsViewModel(
-            notificationManager: notificationManager,
-            themeManager: themeManager
-        )
+    init() {
+        // Создаем временные экземпляры для инициализации, они будут обновлены в onAppear
+        self._viewModel = StateObject(wrappedValue: SettingsViewModel(notificationManager: NotificationManager(), themeManager: ThemeManager()))
     }
     
     var body: some View {
         NavigationView {
-            settingsList
+            List {
+                ForEach(viewModel.sections) { section in
+                    Section(header: Text(section.title).font(.headline).foregroundColor(.secondary)) {
+                        ForEach(section.items) { item in
+                            SettingsRowView(item: item, onTap: {
+                                handleItemTap(item)
+                            }, viewModel: viewModel)
+                        }
+                    }
+                }
+            }
+            .listStyle(InsetGroupedListStyle())
+            .navigationTitle("Настройки")
+            .navigationBarTitleDisplayMode(.large)
         }
-        .background(backgroundColor)
-        .sheet(isPresented: $showingAboutApp) {
-            AboutAppView()
+        .onAppear {
+            // Обновляем ViewModel с правильными зависимостями
+            viewModel.updateDependencies(notificationManager: notificationManager, themeManager: themeManager)
+        }
+        .sheet(isPresented: $showingReminders) {
+            RemindersView(notificationManager: notificationManager)
+                .environmentObject(themeManager)
         }
         .sheet(isPresented: $showingThemeSelection) {
             ThemeSelectionView(themeManager: themeManager)
         }
-        .sheet(isPresented: $showingReminders) {
-            RemindersView(notificationManager: notificationManager)
+        .sheet(isPresented: $showingAboutApp) {
+            AboutAppView()
         }
-    }
-    
-    // MARK: - View Components
-    
-    @ViewBuilder
-    private var settingsList: some View {
-        List {
-            ForEach(actualViewModel.sections) { section in
-                settingsSection(for: section)
-            }
-        }
-        .listStyle(PlainListStyle())
-        .background(backgroundColor)
-        .navigationTitle("Настройки")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarColorScheme(themeManager.isDarkMode ? .dark : .light, for: .navigationBar)
-    }
-    
-    @ViewBuilder
-    private func settingsSection(for section: SettingSection) -> some View {
-        Section(header: Text(section.title)
-            .foregroundColor(primaryTextColor)
-            .font(.headline)
-        ) {
-            ForEach(section.items) { item in
-                SettingsRowView(item: item, onTap: {
-                    handleItemTap(item)
-                }, viewModel: actualViewModel)
-            }
+        .sheet(isPresented: $showingPetProfile) {
+            PetProfileView()
         }
     }
     
@@ -131,8 +67,7 @@ struct SettingsView: View {
     }
     
     private func handlePetProfileTap() {
-        // TODO: Переход на EditPetView
-        print("Pet profile tapped")
+        showingPetProfile = true
     }
     
     private func handleNotificationsTap() {
@@ -382,5 +317,5 @@ struct AboutAppView: View {
 }
 
 #Preview {
-    SettingsView(notificationManager: NotificationManager())
+    SettingsView()
 } 

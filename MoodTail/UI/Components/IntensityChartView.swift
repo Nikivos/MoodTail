@@ -58,7 +58,7 @@ struct IntensityChartView: View {
             }
         }
         .frame(height: 200)
-        .animation(.easeInOut(duration: 0.8), value: data.map { $0.1 })
+        .animation(.easeInOut(duration: 0.8), value: data.map { $0.1.isNaN ? 0.0 : max(0.0, $0.1) })
     }
     
     private var emptyStateView: some View {

@@ -22,7 +22,7 @@ struct MoodLoggerModel {
     }
 }
 
-enum DogEmotion: String, CaseIterable {
+enum DogEmotion: String, CaseIterable, Codable {
     case happy = "happy"
     case excited = "excited"
     case calm = "calm"
@@ -65,16 +65,29 @@ enum DogEmotion: String, CaseIterable {
         }
     }
     
-                    var color: Color {
-                    switch self {
-                    case .happy: return .moodColors.happy
-                    case .excited: return .moodColors.excited
-                    case .calm: return .moodColors.calm
-                    case .anxious: return .moodColors.anxious
-                    case .sad: return .moodColors.sad
-                    case .playful: return .moodColors.playful
-                    case .tired: return .moodColors.tired
-                    case .aggressive: return .moodColors.aggressive
-                    }
-                }
+    var color: Color {
+        switch self {
+        case .happy: return Color.moodColors.happy
+        case .excited: return Color.moodColors.excited
+        case .calm: return Color.moodColors.calm
+        case .anxious: return Color.moodColors.anxious
+        case .sad: return Color.moodColors.sad
+        case .playful: return Color.moodColors.playful
+        case .tired: return Color.moodColors.tired
+        case .aggressive: return Color.moodColors.aggressive
+        }
+    }
+    
+    var gradient: LinearGradient {
+        switch self {
+        case .happy: return Color.moodColors.happyGradient
+        case .excited: return Color.moodColors.excitedGradient
+        case .calm: return Color.moodColors.calmGradient
+        case .anxious: return Color.moodColors.anxiousGradient
+        case .sad: return Color.moodColors.sadGradient
+        case .playful: return Color.moodColors.playfulGradient
+        case .tired: return Color.moodColors.tiredGradient
+        case .aggressive: return Color.moodColors.aggressiveGradient
+        }
+    }
 } 

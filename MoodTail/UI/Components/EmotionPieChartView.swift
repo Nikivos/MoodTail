@@ -35,7 +35,7 @@ struct EmotionPieChartView: View {
                 .foregroundStyle(item.2)
             }
             .frame(height: 150)
-            .animation(.easeInOut(duration: 0.8), value: data.map { $0.1 })
+            .animation(.easeInOut(duration: 0.8), value: data.map { max(0, $0.1) })
             
             // Legend
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {

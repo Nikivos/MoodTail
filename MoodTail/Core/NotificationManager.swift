@@ -144,6 +144,9 @@ class NotificationManager: ObservableObject {
         // Сначала отменяем все существующие уведомления
         await cancelAllReminders()
         
+        // Ждем немного, чтобы убедиться, что отмена завершилась
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 секунды
+        
         // Планируем все активные напоминания
         let enabledReminders = reminders.filter { $0.isEnabled }
         print("📋 Found \(enabledReminders.count) enabled reminders to schedule")
@@ -161,9 +164,17 @@ class NotificationManager: ObservableObject {
     func cancelAllReminders() async {
         let center = UNUserNotificationCenter.current()
         
+        // Получаем все pending notifications
+        let requests = await center.pendingNotificationRequests()
+        let ourIdentifiers = requests.filter { request in
+            request.identifier.hasPrefix("mood-reminder-")
+        }.map { $0.identifier }
+        
         // Отменяем все наши уведомления
-        let identifiers = reminders.map { $0.notificationIdentifier }
-        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        if !ourIdentifiers.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: ourIdentifiers)
+            print("🗑️ Cancelled \(ourIdentifiers.count) existing notifications")
+        }
         
         await MainActor.run {
             self.isAnyReminderEnabled = false
@@ -307,12 +318,14 @@ class NotificationManager: ObservableObject {
         let sortedEntries = entries.sorted { $0.safeTimestamp < $1.safeTimestamp }
         let recentEntries = Array(sortedEntries.suffix(3))
         
-        let averageIntensity = recentEntries.reduce(0.0) { $0 + Double($1.safeIntensity) } / Double(recentEntries.count)
+        let totalIntensity = recentEntries.reduce(0.0) { $0 + Double($1.safeIntensity) }
+        let averageIntensity = recentEntries.count > 0 ? totalIntensity / Double(recentEntries.count) : 0.0
+        let safeAverageIntensity = averageIntensity.isNaN ? 0.0 : averageIntensity
         
         // Определяем тренд
-        if averageIntensity >= 7.0 {
+        if safeAverageIntensity >= 7.0 {
             return .improving
-        } else if averageIntensity <= 4.0 {
+        } else if safeAverageIntensity <= 4.0 {
             return .declining
         } else {
             return .stable

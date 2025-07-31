@@ -112,6 +112,7 @@ struct ReminderEditView: View {
                     enableSection
                 }
                 .padding()
+                .frame(minHeight: 0) // Предотвращаем конфликты layout
             }
             .background(backgroundColor)
             .navigationTitle(reminder == nil ? "Новое напоминание" : "Редактировать")
@@ -140,11 +141,13 @@ struct ReminderEditView: View {
                 .foregroundColor(primaryTextColor)
             
             DatePicker("Время", selection: $time, displayedComponents: .hourAndMinute)
-                .datePickerStyle(WheelDatePickerStyle())
+                .datePickerStyle(CompactDatePickerStyle()) // Используем более безопасный стиль
                 .labelsHidden()
                 .padding()
                 .background(cardBackgroundColor)
                 .cornerRadius(12)
+                .frame(minHeight: 44, maxHeight: 60) // Фиксированная высота для предотвращения конфликтов
+                .clipped() // Обрезаем содержимое по границам
         }
     }
     
@@ -207,9 +210,23 @@ struct ReminderEditView: View {
                 .font(.headline)
                 .foregroundColor(primaryTextColor)
             
-            TextField("Введите сообщение", text: $message, axis: .vertical)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .lineLimit(3...6)
+                                            TextField("Введите сообщение", text: $message, axis: .vertical)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocorrectionDisabled(false)
+                    .textInputAutocapitalization(.sentences)
+                    .toolbar {
+                        ToolbarItem(placement: .keyboard) {
+                            HStack {
+                                Spacer()
+                                Button("Готово") {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                }
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .lineLimit(3...6)
             
             // Quick messages
             ScrollView(.horizontal, showsIndicators: false) {

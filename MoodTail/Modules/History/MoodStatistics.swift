@@ -36,7 +36,8 @@ struct MoodStatistics {
         
         // Средняя интенсивность
         let totalIntensity = entries.reduce(0) { $0 + Int($1.intensity) }
-        let averageIntensity = Double(totalIntensity) / Double(entries.count)
+        let averageIntensity = entries.count > 0 ? Double(totalIntensity) / Double(entries.count) : 0.0
+        let safeAverageIntensity = averageIntensity.isNaN ? 0.0 : averageIntensity
         
         // Самая частая эмоция
         let emotionCounts: [String: Int] = entries.reduce(into: [:]) { counts, entry in
@@ -48,7 +49,7 @@ struct MoodStatistics {
         
         return MoodStatistics(
             totalEntries: entries.count,
-            averageIntensity: averageIntensity,
+            averageIntensity: safeAverageIntensity,
             mostCommonEmotion: mostCommonEmotion,
             entriesThisWeek: entriesThisWeek,
             entriesThisMonth: entriesThisMonth
