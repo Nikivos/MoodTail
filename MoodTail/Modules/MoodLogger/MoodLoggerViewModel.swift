@@ -40,14 +40,16 @@ class MoodLoggerViewModel: BaseViewModel {
         isLoading = true
         
         do {
-            let entry = MoodEntry(context: PersistenceController.shared.container.viewContext)
-            entry.id = UUID()
-            entry.emotion = emotion.rawValue
-            entry.intensity = Int16(intensity)
-            entry.note = note.isEmpty ? nil : note
-            entry.timestamp = Date()
+            // Создаем временный объект для передачи данных
+            let tempEntry = MoodEntryData()
+            tempEntry.id = UUID()
+            tempEntry.emotion = emotion.rawValue
+            tempEntry.intensity = Int16(intensity)
+            tempEntry.note = note.isEmpty ? nil : note
+            tempEntry.timestamp = Date()
             
-            try await moodStorage.saveMoodEntry(entry)
+            // Сохраняем через background context
+            try await moodStorage.saveMoodEntry(tempEntry)
             
             // Сброс формы
             selectedEmotion = nil
@@ -76,4 +78,6 @@ class MoodLoggerViewModel: BaseViewModel {
         default: return "Среднее"
         }
     }
-} 
+}
+
+ 

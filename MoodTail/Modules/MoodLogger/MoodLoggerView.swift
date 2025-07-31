@@ -26,6 +26,7 @@ struct MoodLoggerView: View {
                 }
                 .padding()
             }
+            .themeable()
             .navigationTitle("Настроение собаки")
             .navigationBarTitleDisplayMode(.large)
             .alert("Ошибка", isPresented: Binding(
@@ -140,7 +141,7 @@ struct MoodLoggerView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(viewModel.canSave ? Color.blue : Color.gray)
+            .background(viewModel.canSave ? Color.lightAccent : Color.lightSecondaryText)
             .foregroundColor(.white)
             .cornerRadius(12)
         }
@@ -157,8 +158,15 @@ struct EmotionCard: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Text(emotion.emoji)
-                    .font(.system(size: 32))
+                if let image = emotion.image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                } else {
+                    Text(emotion.emoji)
+                        .font(.system(size: 32))
+                }
                 
                 Text(emotion.displayName)
                     .font(.caption)
@@ -167,13 +175,10 @@ struct EmotionCard: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 80)
-            .background(
+            .themeableCard()
+            .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-                    )
+                    .stroke(isSelected ? Color.lightAccent : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())

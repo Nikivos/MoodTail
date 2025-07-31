@@ -34,7 +34,7 @@ enum DogEmotion: String, CaseIterable {
     
     var emoji: String {
         switch self {
-        case .happy: return "😊"
+        case .happy: return "🐕"
         case .excited: return "🤩"
         case .calm: return "😌"
         case .anxious: return "😰"
@@ -42,6 +42,13 @@ enum DogEmotion: String, CaseIterable {
         case .playful: return "🤪"
         case .tired: return "😴"
         case .aggressive: return "😠"
+        }
+    }
+    
+    var image: Image? {
+        switch self {
+        case .happy: return Image("happy-dog")
+        default: return nil
         }
     }
     

@@ -20,6 +20,7 @@ struct HistoryView: View {
                     moodEntriesList
                 }
             }
+            .themeable()
             .navigationTitle("История")
             .navigationBarTitleDisplayMode(.large)
             .refreshable {
@@ -61,18 +62,70 @@ struct HistoryView: View {
     }
     
     private var moodEntriesList: some View {
-        List {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                // Секция аналитики
+                if !viewModel.analytics.dailyIntensity.isEmpty {
+                    analyticsSection
+                }
+                
+                // Секция записей или пустое состояние
+                if viewModel.groupedEntries.isEmpty {
+                    EmptyStateView(
+                        title: "Нет записей",
+                        subtitle: "Добавьте первую запись о настроении вашей собаки",
+                        icon: "pawprint.circle"
+                    )
+                } else {
+                    entriesSection
+                }
+            }
+            .padding()
+        }
+    }
+    
+    private var analyticsSection: some View {
+        VStack(spacing: 16) {
+            // Линейный график
+            IntensityChartView(
+                data: viewModel.analyticsEngine.getChartData(for: 7, from: viewModel.analytics),
+                title: "Динамика настроения (7 дней)"
+            )
+            
+            // Круговая диаграмма
+            EmotionPieChartView(
+                data: viewModel.analyticsEngine.getEmotionChartData(from: viewModel.analytics),
+                title: "Распределение эмоций"
+            )
+            
+            // Инсайты
+            InsightsView(analytics: viewModel.analytics)
+        }
+    }
+    
+    private var entriesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Записи")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
             ForEach(viewModel.groupedEntries.keys.sorted(by: >), id: \.self) { date in
-                Section(header: dateHeader(for: date)) {
-                    ForEach(viewModel.groupedEntries[date] ?? [], id: \.id) { entry in
+                VStack(alignment: .leading, spacing: 8) {
+                    dateHeader(for: date)
+                    
+                    ForEach(viewModel.groupedEntries[date] ?? [], id: \.safeID) { entry in
                         MoodEntryRow(entry: entry) {
                             await viewModel.deleteMoodEntry(entry)
                         }
+                        .padding(.vertical, 4)
                     }
                 }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
             }
         }
-        .listStyle(InsetGroupedListStyle())
     }
     
     private func dateHeader(for date: Date) -> some View {
@@ -108,12 +161,21 @@ struct MoodEntryRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Эмодзи эмоции
-            Text(emotionEmoji)
-                .font(.title2)
-                .frame(width: 40, height: 40)
-                .background(Color(emotionColor))
-                .clipShape(Circle())
+            // Эмодзи или изображение эмоции
+            if let emotionImage = emotionImage {
+                emotionImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 40, height: 40)
+                    .background(Color(emotionColor))
+                    .clipShape(Circle())
+            } else {
+                Text(emotionEmoji)
+                    .font(.title2)
+                    .frame(width: 40, height: 40)
+                    .background(Color(emotionColor))
+                    .clipShape(Circle())
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -122,13 +184,13 @@ struct MoodEntryRow: View {
                     
                     Spacer()
                     
-                    Text(formatTime(entry.timestamp ?? Date()))
+                    Text(formatTime(entry.safeTimestamp))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
                 HStack {
-                    Text("Интенсивность: \(entry.intensity)/10")
+                    Text("Интенсивность: \(entry.safeIntensity)/10")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -143,7 +205,7 @@ struct MoodEntryRow: View {
                     .buttonStyle(BorderlessButtonStyle())
                 }
                 
-                if let note = entry.note, !note.isEmpty {
+                if let note = entry.safeNote {
                     Text(note)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -165,20 +227,22 @@ struct MoodEntryRow: View {
     }
     
     private var emotionEmoji: String {
-        guard let emotionString = entry.emotion else { return "❓" }
-        let emotion = DogEmotion(rawValue: emotionString) ?? .happy
+        let emotion = DogEmotion(rawValue: entry.safeEmotion) ?? .happy
         return emotion.emoji
     }
     
+    private var emotionImage: Image? {
+        let emotion = DogEmotion(rawValue: entry.safeEmotion) ?? .happy
+        return emotion.image
+    }
+    
     private var emotionDisplayName: String {
-        guard let emotionString = entry.emotion else { return "Неизвестно" }
-        let emotion = DogEmotion(rawValue: emotionString) ?? .happy
+        let emotion = DogEmotion(rawValue: entry.safeEmotion) ?? .happy
         return emotion.displayName
     }
     
     private var emotionColor: Color {
-        guard let emotionString = entry.emotion else { return .gray }
-        let emotion = DogEmotion(rawValue: emotionString) ?? .happy
+        let emotion = DogEmotion(rawValue: entry.safeEmotion) ?? .happy
         return emotion.color
     }
     

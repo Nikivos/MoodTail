@@ -1,0 +1,13 @@
+/* Notification Strings */
+
+// Notification Title
+"notification.title" = "Напоминание о настроении";
+
+// Notification Body
+"notification.body" = "Как чувствует себя твой пёс сегодня? Не забудь записать настроение 🐾";
+
+// Settings Strings
+"settings.notifications.title" = "Напоминания";
+"settings.notifications.subtitle.enabled" = "Включено • 20:00";
+"settings.notifications.subtitle.disabled" = "Отключено";
+"settings.notifications.subtitle.notAuthorized" = "Разрешите уведомления в настройках"; 

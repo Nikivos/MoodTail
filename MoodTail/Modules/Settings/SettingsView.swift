@@ -1,126 +1,380 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject private var viewModel = SettingsViewModel()
+    @StateObject private var viewModel: SettingsViewModel
     @State private var showingAboutApp = false
+    @State private var showingThemeSelection = false
+    @State private var showingReminders = false
+    @EnvironmentObject var themeManager: ThemeManager
+    let notificationManager: NotificationManager
+    
+    // MARK: - Computed Colors
+    private var backgroundColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightSecondaryBackground
+        case .dark:
+            return .darkSecondaryBackground
+        case .system:
+            return themeManager.isDarkMode ? .darkSecondaryBackground : .lightSecondaryBackground
+        }
+    }
+    
+    private var primaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightPrimaryText
+        case .dark:
+            return .darkPrimaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkPrimaryText : .lightPrimaryText
+        }
+    }
+    
+    private var secondaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightSecondaryText
+        case .dark:
+            return .darkSecondaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkSecondaryText : .lightSecondaryText
+        }
+    }
+    
+    private var accentColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightAccent
+        case .dark:
+            return .darkAccent
+        case .system:
+            return themeManager.isDarkMode ? .darkAccent : .lightAccent
+        }
+    }
+    
+    init(notificationManager: NotificationManager) {
+        self.notificationManager = notificationManager
+        self._viewModel = StateObject(wrappedValue: SettingsViewModel(
+            notificationManager: notificationManager,
+            themeManager: ThemeManager()
+        ))
+    }
+    
+    private var actualViewModel: SettingsViewModel {
+        // Используем environmentObject themeManager вместо созданного в init
+        return SettingsViewModel(
+            notificationManager: notificationManager,
+            themeManager: themeManager
+        )
+    }
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(viewModel.sections) { section in
-                    Section(header: Text(section.title)) {
-                        ForEach(section.items) { item in
-                            SettingsRowView(item: item) {
-                                handleItemTap(item)
-                            }
-                        }
-                    }
-                }
+            settingsList
+        }
+        .background(backgroundColor)
+        .sheet(isPresented: $showingAboutApp) {
+            AboutAppView()
+        }
+        .sheet(isPresented: $showingThemeSelection) {
+            ThemeSelectionView(themeManager: themeManager)
+        }
+        .sheet(isPresented: $showingReminders) {
+            RemindersView(notificationManager: notificationManager)
+        }
+    }
+    
+    // MARK: - View Components
+    
+    @ViewBuilder
+    private var settingsList: some View {
+        List {
+            ForEach(actualViewModel.sections) { section in
+                settingsSection(for: section)
             }
-            .navigationTitle("Настройки")
-            .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $showingAboutApp) {
-                AboutAppView()
+        }
+        .listStyle(PlainListStyle())
+        .background(backgroundColor)
+        .navigationTitle("Настройки")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(themeManager.isDarkMode ? .dark : .light, for: .navigationBar)
+    }
+    
+    @ViewBuilder
+    private func settingsSection(for section: SettingSection) -> some View {
+        Section(header: Text(section.title)
+            .foregroundColor(primaryTextColor)
+            .font(.headline)
+        ) {
+            ForEach(section.items) { item in
+                SettingsRowView(item: item, onTap: {
+                    handleItemTap(item)
+                }, viewModel: actualViewModel)
             }
         }
     }
     
+    // MARK: - Actions
+    
     private func handleItemTap(_ item: SettingItem) {
         switch item.type {
         case .petProfile:
-            // TODO: Переход на EditPetView
-            break
+            handlePetProfileTap()
         case .notifications:
-            viewModel.toggleNotifications()
+            handleNotificationsTap()
         case .theme:
-            viewModel.toggleTheme()
+            handleThemeTap()
         case .aboutApp:
-            showingAboutApp = true
+            handleAboutAppTap()
         }
+    }
+    
+    private func handlePetProfileTap() {
+        // TODO: Переход на EditPetView
+        print("Pet profile tapped")
+    }
+    
+    private func handleNotificationsTap() {
+        showingReminders = true
+    }
+    
+    private func handleThemeTap() {
+        showingThemeSelection = true
+    }
+    
+    private func handleAboutAppTap() {
+        showingAboutApp = true
     }
 }
 
 struct SettingsRowView: View {
     let item: SettingItem
     let onTap: () -> Void
+    @ObservedObject var viewModel: SettingsViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    // MARK: - Computed Colors
+    private var primaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightPrimaryText
+        case .dark:
+            return .darkPrimaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkPrimaryText : .lightPrimaryText
+        }
+    }
+    
+    private var secondaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightSecondaryText
+        case .dark:
+            return .darkSecondaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkSecondaryText : .lightSecondaryText
+        }
+    }
+    
+    private var accentColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightAccent
+        case .dark:
+            return .darkAccent
+        case .system:
+            return themeManager.isDarkMode ? .darkAccent : .lightAccent
+        }
+    }
     
     var body: some View {
         HStack {
-            Image(systemName: item.icon)
-                .foregroundColor(item.iconColor)
-                .frame(width: 24, height: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(.body)
-                
-                if let subtitle = item.subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
+            iconView
+            contentView
             Spacer()
-            
-            switch item.accessory {
-            case .chevron:
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-            case .toggle(let isOn):
-                Toggle("", isOn: .constant(isOn))
-                    .labelsHidden()
-            case .none:
-                EmptyView()
-            }
+            accessoryView
         }
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()
         }
+        .listRowBackground(Color.clear)
+    }
+    
+    // MARK: - Subviews
+    
+    @ViewBuilder
+    private var iconView: some View {
+        Image(systemName: item.icon)
+            .foregroundColor(item.iconColor)
+            .frame(width: 24, height: 24)
+    }
+    
+    @ViewBuilder
+    private var contentView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(item.title)
+                .font(.body)
+                .foregroundColor(primaryTextColor)
+            
+            if let subtitle = item.subtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(secondaryTextColor)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var accessoryView: some View {
+        switch item.accessory {
+        case .chevron:
+            chevronAccessory
+        case .toggle(let isOn):
+            toggleAccessory(isOn: isOn)
+        case .none:
+            EmptyView()
+        }
+    }
+    
+    @ViewBuilder
+    private var chevronAccessory: some View {
+        Image(systemName: "chevron.right")
+            .foregroundColor(secondaryTextColor)
+            .font(.caption)
+    }
+    
+    @ViewBuilder
+    private func toggleAccessory(isOn: Bool) -> some View {
+        Toggle("", isOn: Binding(
+            get: { 
+                if case .toggle(let value) = item.accessory {
+                    return value
+                }
+                return false
+            },
+            set: { _ in
+                if item.type == .notifications {
+                    Task {
+                        await viewModel.toggleNotifications()
+                    }
+                }
+            }
+        ))
+        .labelsHidden()
+        .tint(accentColor)
     }
 }
 
 struct AboutAppView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    // MARK: - Computed Colors
+    private var backgroundColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightSecondaryBackground
+        case .dark:
+            return .darkSecondaryBackground
+        case .system:
+            return themeManager.isDarkMode ? .darkSecondaryBackground : .lightSecondaryBackground
+        }
+    }
+    
+    private var primaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightPrimaryText
+        case .dark:
+            return .darkPrimaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkPrimaryText : .lightPrimaryText
+        }
+    }
+    
+    private var secondaryTextColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightSecondaryText
+        case .dark:
+            return .darkSecondaryText
+        case .system:
+            return themeManager.isDarkMode ? .darkSecondaryText : .lightSecondaryText
+        }
+    }
+    
+    private var accentColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightAccent
+        case .dark:
+            return .darkAccent
+        case .system:
+            return themeManager.isDarkMode ? .darkAccent : .lightAccent
+        }
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.pink)
+                    .foregroundColor(accentColor)
                 
                 VStack(spacing: 8) {
                     Text("MoodTail")
                         .font(.largeTitle)
                         .fontWeight(.bold)
+                        .foregroundColor(primaryTextColor)
                     
                     Text("Версия 1.0.0")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
                 
                 VStack(spacing: 16) {
                     Text("Приложение для отслеживания настроения вашей собаки")
                         .font(.body)
+                        .foregroundColor(primaryTextColor)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     
                     Text("Разработано с ❤️ для заботливых владельцев")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
+                
+                // Debug section
+                VStack(spacing: 12) {
+                    Text("Для разработчиков")
+                        .font(.headline)
+                        .foregroundColor(primaryTextColor)
+                    
+                    Button("Сбросить Onboarding") {
+                        UserDefaults.standard.set(false, forKey: "onboardingCompleted")
+                        dismiss()
+                    }
+                    .foregroundColor(.red)
+                    .font(.caption)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
                 
                 Spacer()
             }
             .padding()
+            .background(backgroundColor)
             .navigationTitle("О приложении")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Готово") {
-                        // Закрытие модального окна
+                        dismiss()
                     }
+                    .foregroundColor(accentColor)
                 }
             }
         }
@@ -128,5 +382,5 @@ struct AboutAppView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(notificationManager: NotificationManager())
 } 

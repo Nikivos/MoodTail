@@ -1,12 +1,37 @@
-import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class SettingsViewModel: ObservableObject {
     @Published var sections: [SettingSection] = []
     
-    init() {
+    private let notificationManager: NotificationManager
+    private let themeManager: ThemeManager
+    private var cancellables = Set<AnyCancellable>()
+    
+    init(notificationManager: NotificationManager, themeManager: ThemeManager) {
+        self.notificationManager = notificationManager
+        self.themeManager = themeManager
+        
         setupSections()
+        setupNotificationObserver()
+    }
+    
+    private func setupNotificationObserver() {
+        // Подписываемся на изменения статуса уведомлений
+        notificationManager.$isAuthorized
+            .combineLatest(notificationManager.$isAnyReminderEnabled, notificationManager.$reminders)
+            .sink { [weak self] _, _, _ in
+                self?.updateNotificationSection()
+            }
+            .store(in: &cancellables)
+        
+        // Подписываемся на изменения темы
+        themeManager.$currentTheme
+            .sink { [weak self] _ in
+                self?.updateThemeSection()
+            }
+            .store(in: &cancellables)
     }
     
     private func setupSections() {
@@ -19,7 +44,7 @@ class SettingsViewModel: ObservableObject {
                         title: "Профиль питомца",
                         subtitle: "Изменить имя и фото",
                         icon: "pawprint.fill",
-                        iconColor: .orange,
+                        iconColor: getIconColor(for: .petProfile),
                         accessory: .chevron
                     )
                 ]
@@ -32,8 +57,8 @@ class SettingsViewModel: ObservableObject {
                         title: "Напоминания",
                         subtitle: "Ежедневные напоминания о записи настроения",
                         icon: "bell.fill",
-                        iconColor: .blue,
-                        accessory: .toggle(true)
+                        iconColor: getIconColor(for: .notifications),
+                        accessory: .chevron
                     )
                 ]
             ),
@@ -43,10 +68,10 @@ class SettingsViewModel: ObservableObject {
                     SettingItem(
                         type: .theme,
                         title: "Тема",
-                        subtitle: "Светлая / Темная",
+                        subtitle: themeManager.currentTheme.displayName,
                         icon: "moon.fill",
-                        iconColor: .purple,
-                        accessory: .toggle(false)
+                        iconColor: getIconColor(for: .theme),
+                        accessory: .chevron
                     )
                 ]
             ),
@@ -58,31 +83,110 @@ class SettingsViewModel: ObservableObject {
                         title: "О MoodTail",
                         subtitle: "Версия 1.0.0",
                         icon: "info.circle.fill",
-                        iconColor: .green,
+                        iconColor: getIconColor(for: .aboutApp),
                         accessory: .chevron
                     )
                 ]
             )
         ]
+        updateNotificationSection() // Initial update
     }
     
-    func toggleNotifications() {
-        // TODO: Реализовать логику уведомлений
-        print("Toggle notifications")
+    // MARK: - Icon Colors
+    private func getIconColor(for type: SettingItemType) -> Color {
+        switch type {
+        case .petProfile:
+            return .orange
+        case .notifications:
+            return getAccentColor()
+        case .theme:
+            return getAccentColor()
+        case .aboutApp:
+            return .green
+        }
     }
     
-    func toggleTheme() {
-        // TODO: Реализовать переключение темы
-        print("Toggle theme")
+    private func getAccentColor() -> Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return .lightAccent
+        case .dark:
+            return .darkAccent
+        case .system:
+            return themeManager.isDarkMode ? .darkAccent : .lightAccent
+        }
+    }
+    
+    // MARK: - Toggle Notifications
+    func toggleNotifications() async {
+        if notificationManager.isAuthorized {
+            await notificationManager.cancelAllReminders()
+        } else {
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                await notificationManager.scheduleAllReminders()
+            }
+        }
+    }
+    
+    private func updateNotificationSection() {
+        // Обновляем секцию уведомлений с актуальным статусом
+        if let notificationIndex = sections.firstIndex(where: { $0.title == "Уведомления" }),
+           let itemIndex = sections[notificationIndex].items.firstIndex(where: { $0.type == .notifications }) {
+            
+            let subtitle: String
+            if notificationManager.isAuthorized {
+                let activeRemindersCount = notificationManager.reminders.filter { $0.isEnabled }.count
+                if activeRemindersCount > 0 {
+                    subtitle = "\(activeRemindersCount) активных напоминаний"
+                } else {
+                    subtitle = "Напоминания отключены"
+                }
+            } else {
+                subtitle = "Разрешения не предоставлены"
+            }
+            
+            let newItem = SettingItem(
+                type: .notifications,
+                title: "Напоминания",
+                subtitle: subtitle,
+                icon: "bell.fill",
+                iconColor: getIconColor(for: .notifications),
+                accessory: .chevron
+            )
+            
+            sections[notificationIndex].items[itemIndex] = newItem
+        }
+    }
+    
+    func showThemeSelection() {
+        // Будет реализовано в View
+    }
+    
+    private func updateThemeSection() {
+        // Обновляем секцию темы с актуальным статусом
+        if let themeIndex = sections.firstIndex(where: { $0.title == "Внешний вид" }),
+           let itemIndex = sections[themeIndex].items.firstIndex(where: { $0.type == .theme }) {
+            
+            let newItem = SettingItem(
+                type: .theme,
+                title: "Тема",
+                subtitle: themeManager.currentTheme.displayName,
+                icon: "moon.fill",
+                iconColor: getIconColor(for: .theme),
+                accessory: .chevron
+            )
+            
+            sections[themeIndex].items[itemIndex] = newItem
+        }
     }
 }
 
 // MARK: - Models
-
 struct SettingSection: Identifiable {
     let id = UUID()
     let title: String
-    let items: [SettingItem]
+    var items: [SettingItem]
 }
 
 struct SettingItem: Identifiable {

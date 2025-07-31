@@ -6,8 +6,11 @@ import CoreData
 class HistoryViewModel: BaseViewModel {
     @Published var moodEntries: [MoodEntry] = []
     @Published var groupedEntries: [Date: [MoodEntry]] = [:]
+    @Published var statistics: MoodStatistics = .empty
+    @Published var analytics: MoodAnalytics = .empty // Новое свойство для аналитики
     
     private let moodStorage: MoodStorageProtocol
+    let analyticsEngine = MoodAnalyticsEngine() // Сделал публичным для доступа из View
     
     init(moodStorage: MoodStorageProtocol) {
         self.moodStorage = moodStorage
@@ -20,7 +23,9 @@ class HistoryViewModel: BaseViewModel {
         do {
             // Загружаем записи за последние 30 дней
             moodEntries = try await moodStorage.fetchMoodEntries(for: 30)
-            groupEntriesByDate()
+            
+            // Обрабатываем данные в background
+            await processDataInBackground()
         } catch {
             handleError(error)
         }
@@ -30,50 +35,69 @@ class HistoryViewModel: BaseViewModel {
     
     func deleteMoodEntry(_ entry: MoodEntry) async {
         do {
+            // Проверяем только базовые условия
+            guard let entryID = entry.id else {
+                handleError(MoodStorageError.invalidEntry("Entry has no ID"))
+                return
+            }
+            
             try await moodStorage.deleteMoodEntry(entry)
-            await loadMoodEntries() // Перезагружаем список
+            
+            // Локальное обновление без перезагрузки
+            moodEntries.removeAll { $0.safeID == entry.safeID }
+            await processDataInBackground()
         } catch {
             handleError(error)
         }
     }
     
-    private func groupEntriesByDate() {
-        let calendar = Calendar.current
+    private func processDataInBackground() async {
+        let entries = moodEntries // Копируем данные для background обработки
         
-        groupedEntries = Dictionary(grouping: moodEntries) { entry in
-            guard let timestamp = entry.timestamp else { return Date() }
-            return calendar.startOfDay(for: timestamp)
-        }
+        await Task.detached(priority: .userInitiated) {
+            // Группировка в background
+            let calendar = Calendar.current
+            let grouped = Dictionary(grouping: entries) { entry in
+                guard let timestamp = entry.timestamp else { return Date() }
+                return calendar.startOfDay(for: timestamp)
+            }
+            
+            // Вычисление статистики в background
+            let stats = MoodStatistics.calculate(from: entries)
+            
+            // Возвращаемся на главный поток
+            await MainActor.run {
+                self.groupedEntries = grouped
+                self.statistics = stats
+            }
+        }.value
+        
+        // Аналитика в отдельном Task для лучшей производительности
+        await calculateAnalytics()
     }
     
-    // Статистика
+    private func calculateAnalytics() async {
+        analytics = await analyticsEngine.analyzeMoodData(moodEntries)
+    }
+    
+    // Удаляем старые вычисляемые свойства - теперь используем кэшированную статистику
     var totalEntries: Int {
-        moodEntries.count
+        statistics.totalEntries
     }
     
     var averageIntensity: Double {
-        guard !moodEntries.isEmpty else { return 0 }
-        let total = moodEntries.reduce(0) { $0 + Int($1.intensity) }
-        return Double(total) / Double(moodEntries.count)
+        statistics.averageIntensity
     }
     
     var mostCommonEmotion: String? {
-        let emotionCounts: [String: Int] = moodEntries.reduce(into: [:]) { counts, entry in
-            if let emotion = entry.emotion {
-                counts[emotion, default: 0] += 1
-            }
-        }
-        
-        return emotionCounts.max(by: { $0.value < $1.value })?.key
+        statistics.mostCommonEmotion
     }
     
     var entriesThisWeek: Int {
-        let calendar = Calendar.current
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        
-        return moodEntries.filter { entry in
-            guard let timestamp = entry.timestamp else { return false }
-            return timestamp >= weekAgo
-        }.count
+        statistics.entriesThisWeek
+    }
+    
+    var entriesThisMonth: Int {
+        statistics.entriesThisMonth
     }
 } 
