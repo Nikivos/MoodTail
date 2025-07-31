@@ -26,7 +26,7 @@ struct MoodTailApp: App {
                         Text("История")
                     }
                 
-                Text("Настройки")
+                SettingsView()
                     .tabItem {
                         Image(systemName: "gear")
                         Text("Настройки")
